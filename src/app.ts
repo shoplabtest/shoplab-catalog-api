@@ -78,7 +78,7 @@ export function createApp({ cfg, store, events }: Deps) {
   });
 
   app.get('/search', async (req, res) => {
-    const q = req.query.q;
+    const q = req.query.query;
     const sort = (req.query.sort ?? 'relevance') as Sort;
     if (typeof q !== 'string' || !q.trim() || !SORTS.includes(sort)) return void res.status(400).json({ error: 'invalid_request' });
     res.json((await store.search(q.trim(), sort, 50)).map(toProduct));

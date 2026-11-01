@@ -74,12 +74,12 @@ test('list paginates and filters by category', async () => {
 test('search sorts by price and rejects bad input', async () => {
   await create('Zeta Headphones', 9000);
   await create('Alpha Headphones', 3000);
-  const asc = (await (await call('/search?q=headphones&sort=price_asc')).json()) as { price: { amount: number } }[];
+  const asc = (await (await call('/search?query=headphones&sort=price_asc')).json()) as { price: { amount: number } }[];
   assert.deepEqual(asc.map((p) => p.price.amount), [3000, 9000]);
-  const desc = (await (await call('/search?q=headphones&sort=price_desc')).json()) as { price: { amount: number } }[];
+  const desc = (await (await call('/search?query=headphones&sort=price_desc')).json()) as { price: { amount: number } }[];
   assert.deepEqual(desc.map((p) => p.price.amount), [9000, 3000]);
   assert.equal((await call('/search')).status, 400);
-  assert.equal((await call('/search?q=x&sort=bogus')).status, 400);
+  assert.equal((await call('/search?query=x&sort=bogus')).status, 400);
 });
 
 test('categories come back as a tree', async () => {
