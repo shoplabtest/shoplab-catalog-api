@@ -95,3 +95,10 @@ test('delete removes the product', async () => {
   assert.equal((await call(`/products/${id}`)).status, 404);
   assert.equal((await call(`/products/${id}`, 'DELETE', undefined, 'staff')).status, 404);
 });
+
+test('product responses include description when one is set', async () => {
+  const created = (await (await call('/products', 'POST', { name: 'Described', description: 'Warm sound', price: { amount: 100, currency: 'USD' }, categoryId: 'audio' }, 'staff')).json()) as { id: string; description?: string };
+  assert.equal(created.description, 'Warm sound');
+  const plain = await create('Undescribed', 100);
+  assert.equal(((await (await call(`/products/${plain.id}`)).json()) as { description?: string }).description, undefined);
+});
