@@ -214,3 +214,9 @@ ALTER TABLE ONLY public.product_variants
 
 \unrestrict xeGhfgModIEZi5TVbq4tfjx9mi4cD4NgDQ9Jzhq506paLXHOWSsinbTd6gKOAuW
 
+
+--
+-- Name: catalog_products_name_idx; Type: INDEX; Schema: public
+--
+
+CREATE INDEX catalog_products_name_idx ON public.catalog_products USING btree (name);

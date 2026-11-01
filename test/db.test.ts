@@ -14,7 +14,7 @@ test('migrations apply to an empty database, seed is idempotent, view and search
   try {
     await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
     const dir = resolve(import.meta.dirname, '../migrations');
-    assert.equal((await migrate(pool, dir)).length, 4);
+    assert.equal((await migrate(pool, dir)).length, 5);
     assert.deepEqual(await migrate(pool, dir), []);
 
     assert.equal(await seed(pool), 200);
