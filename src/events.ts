@@ -4,7 +4,7 @@ export const EXCHANGE = 'shop.events';
 
 /** Matches shoplab-contracts events/product.updated.schema.json. `price` is an integer in minor units. */
 export interface ProductUpdated {
-  productId: string;
+  id: string;
   price: number;
   currency: string;
   updatedAt: string;

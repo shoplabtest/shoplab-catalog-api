@@ -55,7 +55,7 @@ test('GET /products/:id returns the contract shape; unknown id is 404', async ()
 
 test('product.updated carries an integer price in minor units', async () => {
   const { id } = await create('Event Cable', 1200);
-  assert.deepEqual(Object.keys(events.published.at(-1)!.body as object).sort(), ['currency', 'price', 'productId', 'updatedAt']);
+  assert.deepEqual(Object.keys(events.published.at(-1)!.body as object).sort(), ['currency', 'id', 'price', 'updatedAt']);
   await call(`/products/${id}`, 'PUT', { price: { amount: 999, currency: 'EUR' } }, 'staff');
   const ev = events.published.at(-1)!;
   assert.equal(ev.key, 'product.updated');
