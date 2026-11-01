@@ -16,15 +16,15 @@ export const toProduct = (p: ProductRow) => ({
   ...(p.image_url ? { imageUrl: p.image_url } : {}),
 });
 
-interface CategoryNode { id: string; name: string; children: CategoryNode[] }
+interface CategoryNode { id: string; name: string; subcategories: CategoryNode[] }
 
 export function buildTree(rows: CategoryRow[]): CategoryNode[] {
-  const nodes = new Map(rows.map((r) => [r.id, { id: r.id, name: r.name, children: [] as CategoryNode[] }]));
+  const nodes = new Map(rows.map((r) => [r.id, { id: r.id, name: r.name, subcategories: [] as CategoryNode[] }]));
   const roots: CategoryNode[] = [];
   for (const r of rows) {
     const node = nodes.get(r.id)!;
     const parent = r.parent_id ? nodes.get(r.parent_id) : undefined;
-    (parent ? parent.children : roots).push(node);
+    (parent ? parent.subcategories : roots).push(node);
   }
   return roots;
 }
