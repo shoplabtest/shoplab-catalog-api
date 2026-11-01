@@ -14,6 +14,7 @@ export const toProduct = (p: ProductRow) => ({
   price: { amount: p.price_amount, currency: p.currency },
   categoryId: p.category_id,
   ...(p.image_url ? { imageUrl: p.image_url } : {}),
+  ...(p.description ? { description: p.description } : {}),
 });
 
 interface CategoryNode { id: string; name: string; children: CategoryNode[] }
