@@ -61,7 +61,7 @@ export function createApp({ cfg, store, events }: Deps) {
   const staff = requireStaff(cfg);
 
   const announce = (p: ProductRow) =>
-    events.publish('product.updated', { productId: p.id, price: p.price_amount, currency: p.currency, updatedAt: p.updated_at.toISOString() });
+    events.publish('product.updated', { productId: p.id, price: (p.price_amount / 100).toFixed(2), currency: p.currency, updatedAt: p.updated_at.toISOString() });
 
   app.get('/healthz', (_req, res) => void res.json({ ok: true }));
 
