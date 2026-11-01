@@ -83,10 +83,10 @@ test('search sorts by price and rejects bad input', async () => {
 });
 
 test('categories come back as a tree', async () => {
-  const tree = (await (await call('/categories')).json()) as { id: string; children: { id: string }[] }[];
+  const tree = (await (await call('/categories')).json()) as { id: string; subcategories: { id: string }[] }[];
   assert.equal(tree.length, 1);
   assert.equal(tree[0].id, 'electronics');
-  assert.deepEqual(tree[0].children.map((c) => c.id), ['audio']);
+  assert.deepEqual(tree[0].subcategories.map((c) => c.id), ['audio']);
 });
 
 test('delete removes the product', async () => {
