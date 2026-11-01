@@ -11,7 +11,8 @@ const SORTS: Sort[] = ['relevance', 'price_asc', 'price_desc'];
 export const toProduct = (p: ProductRow) => ({
   id: p.id,
   name: p.name,
-  price: { amount: p.price_amount, currency: p.currency },
+  price: p.price_amount,
+  currency: p.currency,
   categoryId: p.category_id,
   ...(p.image_url ? { imageUrl: p.image_url } : {}),
 });

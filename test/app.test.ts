@@ -49,7 +49,7 @@ test('create validates price, currency and category', async () => {
 test('GET /products/:id returns the contract shape; unknown id is 404', async () => {
   const { id } = await create('Studio Speaker', 4500);
   const p = (await (await call(`/products/${id}`)).json()) as Record<string, unknown>;
-  assert.deepEqual(p, { id, name: 'Studio Speaker', price: { amount: 4500, currency: 'USD' }, categoryId: 'audio' });
+  assert.deepEqual(p, { id, name: 'Studio Speaker', price: 4500, currency: 'USD', categoryId: 'audio' });
   assert.equal((await call('/products/missing')).status, 404);
 });
 
@@ -74,10 +74,10 @@ test('list paginates and filters by category', async () => {
 test('search sorts by price and rejects bad input', async () => {
   await create('Zeta Headphones', 9000);
   await create('Alpha Headphones', 3000);
-  const asc = (await (await call('/search?q=headphones&sort=price_asc')).json()) as { price: { amount: number } }[];
-  assert.deepEqual(asc.map((p) => p.price.amount), [3000, 9000]);
-  const desc = (await (await call('/search?q=headphones&sort=price_desc')).json()) as { price: { amount: number } }[];
-  assert.deepEqual(desc.map((p) => p.price.amount), [9000, 3000]);
+  const asc = (await (await call('/search?q=headphones&sort=price_asc')).json()) as { price: number }[];
+  assert.deepEqual(asc.map((p) => p.price), [3000, 9000]);
+  const desc = (await (await call('/search?q=headphones&sort=price_desc')).json()) as { price: number }[];
+  assert.deepEqual(desc.map((p) => p.price), [9000, 3000]);
   assert.equal((await call('/search')).status, 400);
   assert.equal((await call('/search?q=x&sort=bogus')).status, 400);
 });
