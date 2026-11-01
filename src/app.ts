@@ -65,13 +65,13 @@ export function createApp({ cfg, store, events }: Deps) {
 
   app.get('/healthz', (_req, res) => void res.json({ ok: true }));
 
-  app.get('/products', async (req, res) => {
+  app.get('/catalog/products', async (req, res) => {
     const page = Math.max(1, Number(req.query.page ?? 1) || 1);
     const category = typeof req.query.category === 'string' ? req.query.category : undefined;
     res.json((await store.listProducts({ categoryId: category, page, pageSize: cfg.pageSize })).map(toProduct));
   });
 
-  app.get('/products/:id', async (req, res) => {
+  app.get('/catalog/products/:id', async (req, res) => {
     const p = await store.getProduct(req.params.id);
     if (!p) return void res.status(404).json({ error: 'not_found' });
     res.json(toProduct(p));
@@ -86,7 +86,7 @@ export function createApp({ cfg, store, events }: Deps) {
 
   app.get('/categories', async (_req, res) => void res.json(buildTree(await store.listCategories())));
 
-  app.post('/products', staff, async (req, res) => {
+  app.post('/catalog/products', staff, async (req, res) => {
     const parsed = parseProduct(req.body ?? {}, false);
     if (typeof parsed === 'string') return void res.status(400).json({ error: 'invalid_request', field: parsed });
     if (!(await store.categoryExists(parsed.categoryId!))) return void res.status(400).json({ error: 'invalid_request', field: 'categoryId' });
@@ -95,7 +95,7 @@ export function createApp({ cfg, store, events }: Deps) {
     res.status(201).json(toProduct(p));
   });
 
-  app.put('/products/:id', staff, async (req, res) => {
+  app.put('/catalog/products/:id', staff, async (req, res) => {
     const parsed = parseProduct(req.body ?? {}, true);
     if (typeof parsed === 'string') return void res.status(400).json({ error: 'invalid_request', field: parsed });
     if (parsed.categoryId && !(await store.categoryExists(parsed.categoryId))) return void res.status(400).json({ error: 'invalid_request', field: 'categoryId' });
@@ -105,7 +105,7 @@ export function createApp({ cfg, store, events }: Deps) {
     res.json(toProduct(p));
   });
 
-  app.delete('/products/:id', staff, async (req, res) => {
+  app.delete('/catalog/products/:id', staff, async (req, res) => {
     res.status((await store.deleteProduct(req.params.id)) ? 204 : 404).end();
   });
 
