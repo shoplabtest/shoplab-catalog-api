@@ -61,7 +61,7 @@ export async function seed(pool: Pool) {
   let created = 0;
   for (const p of seedProducts()) {
     const r = await pool.query(
-      `INSERT INTO catalog_products (id, name, description, price_amount, currency, category_id)
+      `INSERT INTO catalog_items (id, name, description, price_amount, currency, category_id)
        VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (id) DO NOTHING`,
       [p.id, p.name, p.description, p.priceAmount, p.currency, p.categoryId],
     );
