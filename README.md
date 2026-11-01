@@ -4,11 +4,11 @@ Products, prices, categories and search. Express + Postgres.
 
 | Endpoint | Notes |
 | --- | --- |
-| `GET /products` | `category`, `page` query params |
-| `GET /products/:id` | response shape from `shoplab-contracts` |
+| `GET /catalog/products` | `category`, `page` query params |
+| `GET /catalog/products/:id` | response shape from `shoplab-contracts` |
 | `GET /search` | `q`, `sort` = `relevance` \| `price_asc` \| `price_desc` |
 | `GET /categories` | nested tree |
-| `POST/PUT/DELETE /products` | staff or admin JWT from iam; create and update publish `product.updated` |
+| `POST/PUT/DELETE /catalog/products` | staff or admin JWT from iam; create and update publish `product.updated` |
 
 `product.updated.price` is an integer in minor units. The `products` view (`id, name, price_amount, currency, category_id`) is a read-only surface other services may query.
 

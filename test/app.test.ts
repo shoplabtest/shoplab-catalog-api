@@ -30,17 +30,17 @@ before(async () => {
 after(() => void server.close());
 
 const create = async (name: string, amount: number) =>
-  (await (await call('/products', 'POST', { name, price: { amount, currency: 'USD' }, categoryId: 'audio' }, 'staff')).json()) as { id: string };
+  (await (await call('/catalog/products', 'POST', { name, price: { amount, currency: 'USD' }, categoryId: 'audio' }, 'staff')).json()) as { id: string };
 
 test('creating a product requires staff or admin', async () => {
   const body = { name: 'X', price: { amount: 100, currency: 'USD' }, categoryId: 'audio' };
-  assert.equal((await call('/products', 'POST', body)).status, 401);
-  assert.equal((await call('/products', 'POST', body, 'customer')).status, 403);
-  assert.equal((await call('/products', 'POST', body, 'admin')).status, 201);
+  assert.equal((await call('/catalog/products', 'POST', body)).status, 401);
+  assert.equal((await call('/catalog/products', 'POST', body, 'customer')).status, 403);
+  assert.equal((await call('/catalog/products', 'POST', body, 'admin')).status, 201);
 });
 
 test('create validates price, currency and category', async () => {
-  const bad = (b: object) => call('/products', 'POST', b, 'staff');
+  const bad = (b: object) => call('/catalog/products', 'POST', b, 'staff');
   assert.equal((await bad({ name: 'X', price: { amount: 1.5, currency: 'USD' }, categoryId: 'audio' })).status, 400);
   assert.equal((await bad({ name: 'X', price: { amount: 100, currency: 'JPY' }, categoryId: 'audio' })).status, 400);
   assert.equal((await bad({ name: 'X', price: { amount: 100, currency: 'USD' }, categoryId: 'nope' })).status, 400);
@@ -48,15 +48,15 @@ test('create validates price, currency and category', async () => {
 
 test('GET /products/:id returns the contract shape; unknown id is 404', async () => {
   const { id } = await create('Studio Speaker', 4500);
-  const p = (await (await call(`/products/${id}`)).json()) as Record<string, unknown>;
+  const p = (await (await call(`/catalog/products/${id}`)).json()) as Record<string, unknown>;
   assert.deepEqual(p, { id, name: 'Studio Speaker', price: { amount: 4500, currency: 'USD' }, categoryId: 'audio' });
-  assert.equal((await call('/products/missing')).status, 404);
+  assert.equal((await call('/catalog/products/missing')).status, 404);
 });
 
 test('product.updated carries an integer price in minor units', async () => {
   const { id } = await create('Event Cable', 1200);
   assert.deepEqual(Object.keys(events.published.at(-1)!.body as object).sort(), ['currency', 'price', 'productId', 'updatedAt']);
-  await call(`/products/${id}`, 'PUT', { price: { amount: 999, currency: 'EUR' } }, 'staff');
+  await call(`/catalog/products/${id}`, 'PUT', { price: { amount: 999, currency: 'EUR' } }, 'staff');
   const ev = events.published.at(-1)!;
   assert.equal(ev.key, 'product.updated');
   assert.equal((ev.body as { price: unknown }).price, 999);
@@ -64,11 +64,11 @@ test('product.updated carries an integer price in minor units', async () => {
 });
 
 test('list paginates and filters by category', async () => {
-  const page1 = (await (await call('/products?category=audio&page=1')).json()) as unknown[];
-  const page2 = (await (await call('/products?category=audio&page=2')).json()) as unknown[];
+  const page1 = (await (await call('/catalog/products?category=audio&page=1')).json()) as unknown[];
+  const page2 = (await (await call('/catalog/products?category=audio&page=2')).json()) as unknown[];
   assert.equal(page1.length, 2);
   assert.ok(page2.length > 0);
-  assert.equal(((await (await call('/products?category=electronics')).json()) as unknown[]).length, 0);
+  assert.equal(((await (await call('/catalog/products?category=electronics')).json()) as unknown[]).length, 0);
 });
 
 test('search sorts by price and rejects bad input', async () => {
@@ -91,7 +91,7 @@ test('categories come back as a tree', async () => {
 
 test('delete removes the product', async () => {
   const { id } = await create('Temp', 100);
-  assert.equal((await call(`/products/${id}`, 'DELETE', undefined, 'staff')).status, 204);
-  assert.equal((await call(`/products/${id}`)).status, 404);
-  assert.equal((await call(`/products/${id}`, 'DELETE', undefined, 'staff')).status, 404);
+  assert.equal((await call(`/catalog/products/${id}`, 'DELETE', undefined, 'staff')).status, 204);
+  assert.equal((await call(`/catalog/products/${id}`)).status, 404);
+  assert.equal((await call(`/catalog/products/${id}`, 'DELETE', undefined, 'staff')).status, 404);
 });
