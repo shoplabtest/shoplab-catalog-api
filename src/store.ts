@@ -47,27 +47,27 @@ export class PgStore implements Store {
 
   async listProducts({ categoryId, page, pageSize }: { categoryId?: string; page: number; pageSize: number }) {
     const r = await this.pool.query<ProductRow>(
-      `SELECT * FROM catalog_products WHERE ($1::text IS NULL OR category_id = $1)
+      `SELECT * FROM catalog_items WHERE ($1::text IS NULL OR category_id = $1)
        ORDER BY name, id LIMIT $2 OFFSET $3`,
       [categoryId ?? null, pageSize, (page - 1) * pageSize],
     );
     return r.rows;
   }
   async getProduct(id: string) {
-    return (await this.pool.query<ProductRow>('SELECT * FROM catalog_products WHERE id = $1', [id])).rows[0] ?? null;
+    return (await this.pool.query<ProductRow>('SELECT * FROM catalog_items WHERE id = $1', [id])).rows[0] ?? null;
   }
   async search(q: string, sort: Sort, limit: number) {
     const like = `%${q.replace(/[\\%_]/g, '\\$&')}%`;
     const order = sort === 'price_asc' ? 'price_amount ASC, id' : sort === 'price_desc' ? 'price_amount DESC, id' : '(name ILIKE $2) DESC, name, id';
     const r = await this.pool.query<ProductRow>(
-      `SELECT * FROM catalog_products WHERE name ILIKE $1 OR description ILIKE $1 ORDER BY ${order} LIMIT ${Number(limit)}`,
+      `SELECT * FROM catalog_items WHERE name ILIKE $1 OR description ILIKE $1 ORDER BY ${order} LIMIT ${Number(limit)}`,
       sort === 'relevance' ? [like, `${q.replace(/[\\%_]/g, '\\$&')}%`] : [like],
     );
     return r.rows;
   }
   async createProduct(p: NewProduct) {
     const r = await this.pool.query<ProductRow>(
-      `INSERT INTO catalog_products (id, name, description, price_amount, currency, category_id, image_url)
+      `INSERT INTO catalog_items (id, name, description, price_amount, currency, category_id, image_url)
        VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
       [newId(), p.name, p.description ?? '', p.priceAmount, p.currency, p.categoryId, p.imageUrl ?? null],
     );
@@ -75,7 +75,7 @@ export class PgStore implements Store {
   }
   async updateProduct(id: string, p: Partial<NewProduct>) {
     const r = await this.pool.query<ProductRow>(
-      `UPDATE catalog_products SET
+      `UPDATE catalog_items SET
          name = COALESCE($2, name), description = COALESCE($3, description),
          price_amount = COALESCE($4, price_amount), currency = COALESCE($5, currency),
          category_id = COALESCE($6, category_id), image_url = COALESCE($7, image_url), updated_at = now()
@@ -85,7 +85,7 @@ export class PgStore implements Store {
     return r.rows[0] ?? null;
   }
   async deleteProduct(id: string) {
-    return ((await this.pool.query('DELETE FROM catalog_products WHERE id = $1', [id])).rowCount ?? 0) > 0;
+    return ((await this.pool.query('DELETE FROM catalog_items WHERE id = $1', [id])).rowCount ?? 0) > 0;
   }
   async listCategories() {
     return (await this.pool.query<CategoryRow>('SELECT id, parent_id, name FROM categories ORDER BY name')).rows;
