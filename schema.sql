@@ -2,7 +2,7 @@
 -- PostgreSQL database dump
 --
 
-\restrict xeGhfgModIEZi5TVbq4tfjx9mi4cD4NgDQ9Jzhq506paLXHOWSsinbTd6gKOAuW
+\restrict R5rGpLk7OW9BeMh2D7zuKJuYaaWCb8JsKjjXLZAxzRtAkeyEUab76l8fB5rCTJ9
 
 -- Dumped from database version 16.15
 -- Dumped by pg_dump version 16.15
@@ -50,8 +50,11 @@ CREATE TABLE public.catalog_products (
     image_url text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    status text DEFAULT 'active'::text NOT NULL,
+    archived_at timestamp with time zone,
     CONSTRAINT catalog_products_currency_check CHECK ((currency = ANY (ARRAY['USD'::text, 'EUR'::text, 'GBP'::text]))),
-    CONSTRAINT catalog_products_price_amount_check CHECK ((price_amount >= 0))
+    CONSTRAINT catalog_products_price_amount_check CHECK ((price_amount >= 0)),
+    CONSTRAINT catalog_products_status_check CHECK ((status = ANY (ARRAY['active'::text, 'archived'::text])))
 );
 
 
@@ -100,7 +103,8 @@ CREATE VIEW public.products AS
     name,
     price_amount,
     currency,
-    category_id
+    category_id,
+    status
    FROM public.catalog_products;
 
 
@@ -163,6 +167,13 @@ ALTER TABLE ONLY public.schema_migrations
 
 
 --
+-- Name: catalog_products_active_category_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX catalog_products_active_category_idx ON public.catalog_products USING btree (category_id) WHERE (status = 'active'::text);
+
+
+--
 -- Name: catalog_products_category_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -212,5 +223,5 @@ ALTER TABLE ONLY public.product_variants
 -- PostgreSQL database dump complete
 --
 
-\unrestrict xeGhfgModIEZi5TVbq4tfjx9mi4cD4NgDQ9Jzhq506paLXHOWSsinbTd6gKOAuW
+\unrestrict R5rGpLk7OW9BeMh2D7zuKJuYaaWCb8JsKjjXLZAxzRtAkeyEUab76l8fB5rCTJ9
 

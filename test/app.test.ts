@@ -53,13 +53,13 @@ test('GET /products/:id returns the contract shape; unknown id is 404', async ()
   assert.equal((await call('/products/missing')).status, 404);
 });
 
-test('product.updated carries an integer price in minor units', async () => {
+test('product.updated carries pricing in minor units, tiers and status', async () => {
   const { id } = await create('Event Cable', 1200);
-  assert.deepEqual(Object.keys(events.published.at(-1)!.body as object).sort(), ['currency', 'price', 'productId', 'updatedAt']);
+  assert.deepEqual(Object.keys(events.published.at(-1)!.body as object).sort(), ['currency', 'pricing', 'productId', 'status', 'updatedAt']);
   await call(`/products/${id}`, 'PUT', { price: { amount: 999, currency: 'EUR' } }, 'staff');
   const ev = events.published.at(-1)!;
   assert.equal(ev.key, 'product.updated');
-  assert.equal((ev.body as { price: unknown }).price, 999);
+  assert.deepEqual((ev.body as { pricing: unknown }).pricing, { amount: 999, tiers: [] });
   assert.equal((ev.body as { currency: unknown }).currency, 'EUR');
 });
 
@@ -89,9 +89,62 @@ test('categories come back as a tree', async () => {
   assert.deepEqual(tree[0].children.map((c) => c.id), ['audio']);
 });
 
-test('delete removes the product', async () => {
-  const { id } = await create('Temp', 100);
+test('delete archives: hidden from lists and search, 410 on read, event published', async () => {
+  const { id } = await create('Temp Archive Widget', 100);
   assert.equal((await call(`/products/${id}`, 'DELETE', undefined, 'staff')).status, 204);
-  assert.equal((await call(`/products/${id}`)).status, 404);
+  assert.equal(events.published.some((e) => e.key === 'product.archived' && (e.body as { productId: string }).productId === id), true);
+  assert.equal((events.published.at(-1)!.body as { status: string }).status, 'archived');
+  const gone = await call(`/products/${id}`);
+  assert.equal(gone.status, 410);
+  assert.deepEqual(await gone.json(), { error: 'archived' });
+  assert.equal(((await (await call('/search?q=temp%20archive')).json()) as unknown[]).length, 0);
+  assert.equal((await call(`/products/${id}`, 'PUT', { name: 'Nope' }, 'staff')).status, 409);
   assert.equal((await call(`/products/${id}`, 'DELETE', undefined, 'staff')).status, 404);
+  assert.equal((await call('/products/missing')).status, 404);
+});
+
+test('restore brings an archived product back and announces it as active', async () => {
+  const { id } = await create('Restorable', 700);
+  await call(`/products/${id}`, 'DELETE', undefined, 'staff');
+  assert.equal((await call(`/products/${id}/restore`, 'POST', undefined, 'customer')).status, 403);
+  assert.equal((await call(`/products/${id}/restore`, 'POST', undefined, 'staff')).status, 200);
+  assert.equal((events.published.at(-1)!.body as { status: string }).status, 'active');
+  assert.equal((await call(`/products/${id}`)).status, 200);
+  assert.equal((await call(`/products/${id}/restore`, 'POST', undefined, 'staff')).status, 404);
+});
+
+test('tiers: validated, shown on the product, used by /price, and published', async () => {
+  const { id } = await create('Bulk Cable', 1000);
+  const put = (tiers: unknown) => call(`/products/${id}/tiers`, 'PUT', { tiers }, 'staff');
+  assert.equal((await put([{ minQuantity: 1, amount: 900 }])).status, 400);
+  assert.equal((await put([{ minQuantity: 5, amount: 1000 }])).status, 400);
+  assert.equal((await put([{ minQuantity: 5, amount: 900 }, { minQuantity: 10, amount: 950 }])).status, 400);
+  assert.equal((await put([{ minQuantity: 5, amount: 900 }, { minQuantity: 5, amount: 800 }])).status, 400);
+  assert.equal((await call(`/products/${id}/tiers`, 'PUT', { tiers: [] }, 'customer')).status, 403);
+
+  const ok = await put([{ minQuantity: 20, amount: 800 }, { minQuantity: 5, amount: 900 }]);
+  assert.equal(ok.status, 200);
+  assert.deepEqual(((await ok.json()) as { tiers: unknown }).tiers, [{ minQuantity: 5, amount: 900 }, { minQuantity: 20, amount: 800 }]);
+  assert.deepEqual((events.published.at(-1)!.body as { pricing: unknown }).pricing, { amount: 1000, tiers: [{ minQuantity: 5, amount: 900 }, { minQuantity: 20, amount: 800 }] });
+
+  const price = async (q: number) => (await (await call(`/products/${id}/price?quantity=${q}`)).json()) as { unitAmount: number; totalAmount: number };
+  assert.deepEqual(await price(1), { productId: id, quantity: 1, currency: 'USD', unitAmount: 1000, totalAmount: 1000 });
+  assert.equal((await price(4)).unitAmount, 1000);
+  assert.equal((await price(5)).unitAmount, 900);
+  assert.equal((await price(19)).totalAmount, 19 * 900);
+  assert.equal((await price(20)).unitAmount, 800);
+  assert.equal((await call(`/products/${id}/price?quantity=0`)).status, 400);
+  assert.equal((await call(`/products/${id}/price?quantity=2.5`)).status, 400);
+
+  const detail = (await (await call(`/products/${id}`)).json()) as { tiers: unknown[] };
+  assert.equal(detail.tiers.length, 2);
+  const listed = (await (await call('/search?q=bulk%20cable')).json()) as { tiers?: unknown[] }[];
+  assert.equal(listed[0].tiers?.length, 2);
+});
+
+test('a price change may not undercut an existing tier', async () => {
+  const { id } = await create('Tiered Lamp', 1000);
+  await call(`/products/${id}/tiers`, 'PUT', { tiers: [{ minQuantity: 3, amount: 700 }] }, 'staff');
+  assert.equal((await call(`/products/${id}`, 'PUT', { price: { amount: 700, currency: 'USD' } }, 'staff')).status, 400);
+  assert.equal((await call(`/products/${id}`, 'PUT', { price: { amount: 800, currency: 'USD' } }, 'staff')).status, 200);
 });

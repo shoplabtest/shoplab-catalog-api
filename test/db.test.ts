@@ -14,7 +14,7 @@ test('migrations apply to an empty database, seed is idempotent, view and search
   try {
     await pool.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
     const dir = resolve(import.meta.dirname, '../migrations');
-    assert.equal((await migrate(pool, dir)).length, 4);
+    assert.equal((await migrate(pool, dir)).length, 5);
     assert.deepEqual(await migrate(pool, dir), []);
 
     assert.equal(await seed(pool), 200);
@@ -23,7 +23,7 @@ test('migrations apply to an empty database, seed is idempotent, view and search
     const view = await pool.query('SELECT count(*)::int AS n FROM products');
     assert.equal(view.rows[0].n, 200);
     const cols = await pool.query("SELECT column_name FROM information_schema.columns WHERE table_name = 'products' ORDER BY ordinal_position");
-    assert.deepEqual(cols.rows.map((r) => r.column_name), ['id', 'name', 'price_amount', 'currency', 'category_id']);
+    assert.deepEqual(cols.rows.map((r) => r.column_name), ['id', 'name', 'price_amount', 'currency', 'category_id', 'status']);
 
     const store = new PgStore(pool);
     const sample = seedProducts()[0];
@@ -33,6 +33,22 @@ test('migrations apply to an empty database, seed is idempotent, view and search
     assert.deepEqual(asc.map((p) => p.price_amount), [...asc.map((p) => p.price_amount)].sort((a, b) => a - b));
     assert.equal((await store.search('100%_', 'relevance', 5)).length, 0);
     assert.equal((await store.listProducts({ categoryId: 'audio', page: 1, pageSize: 5 })).length, 5);
+
+    const tiered = seedProducts().filter((p) => Number(p.id.slice(-3)) % 5 === 0);
+    const tiers = await store.tiersFor([tiered[0].id, sample.id]);
+    assert.equal(tiers.get(tiered[0].id)?.length, 2);
+    assert.equal(tiers.has(sample.id), false);
+
+    const archived = await store.archiveProduct(sample.id);
+    assert.equal(archived?.status, 'archived');
+    assert.equal(await store.archiveProduct(sample.id), null);
+    assert.equal((await store.getProduct(sample.id))?.status, 'archived');
+    assert.equal((await pool.query('SELECT count(*)::int AS n FROM products WHERE status = $1', ['active'])).rows[0].n, 199);
+    assert.equal((await store.search(sample.name, 'relevance', 500)).some((p) => p.id === sample.id), false);
+    assert.equal((await store.restoreProduct(sample.id))?.status, 'active');
+
+    await store.setTiers(tiered[0].id, [{ minQuantity: 3, amount: 1 }]);
+    assert.deepEqual((await store.tiersFor([tiered[0].id])).get(tiered[0].id), [{ minQuantity: 3, amount: 1 }]);
   } finally {
     await pool.end();
   }
