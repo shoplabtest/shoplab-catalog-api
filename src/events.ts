@@ -2,16 +2,26 @@ import amqp from 'amqplib';
 
 export const EXCHANGE = 'shop.events';
 
-/** Matches shoplab-contracts events/product.updated.schema.json. `price` is an integer in minor units. */
+/**
+ * Matches shoplab-contracts events/product.updated.schema.json.
+ * `pricing.amount` is an integer in minor units; `pricing.tiers` lists quantity breaks, cheapest last.
+ */
 export interface ProductUpdated {
   productId: string;
-  price: number;
   currency: string;
+  status: 'active' | 'archived';
+  pricing: { amount: number; tiers: { minQuantity: number; amount: number }[] };
   updatedAt: string;
+}
+
+export interface ProductArchived {
+  productId: string;
+  archivedAt: string;
 }
 
 export interface Publisher {
   publish(routingKey: 'product.updated', body: ProductUpdated): Promise<void>;
+  publish(routingKey: 'product.archived', body: ProductArchived): Promise<void>;
   close(): Promise<void>;
 }
 

@@ -54,6 +54,14 @@ export function seedProducts(count = 200, seed = 7) {
   });
 }
 
+/** Every fifth product gets a 5+ and a 20+ quantity break (5% and 10% off). */
+export function seedTiers(priceAmount: number) {
+  return [
+    { minQuantity: 5, amount: Math.floor(priceAmount * 0.95) },
+    { minQuantity: 20, amount: Math.floor(priceAmount * 0.9) },
+  ];
+}
+
 export async function seed(pool: Pool) {
   for (const c of SEED_CATEGORIES) {
     await pool.query('INSERT INTO categories (id, parent_id, name) VALUES ($1, $2, $3) ON CONFLICT (id) DO NOTHING', [c.id, c.parent, c.name]);
@@ -66,6 +74,11 @@ export async function seed(pool: Pool) {
       [p.id, p.name, p.description, p.priceAmount, p.currency, p.categoryId],
     );
     created += r.rowCount ?? 0;
+    if ((r.rowCount ?? 0) > 0 && Number(p.id.slice(-3)) % 5 === 0) {
+      for (const t of seedTiers(p.priceAmount)) {
+        await pool.query('INSERT INTO price_tiers (product_id, min_quantity, price_amount) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING', [p.id, t.minQuantity, t.amount]);
+      }
+    }
   }
   return created;
 }
